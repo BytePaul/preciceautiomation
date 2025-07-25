@@ -1,0 +1,42 @@
+---
+- name: Install deal.II and the preCICE deal.II adapter
+  hosts: all
+  become: true
+  vars:
+    adapter_repo_url: "https://github.com/precice/dealii-adapter.git"
+    adapter_path: "{{ ansible_env.HOME }}/dealii-adapter"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install libdeal.ii-dev package
+      apt:
+        name: libdeal.ii-dev
+        state: present
+
+    - name: Clone deal.II adapter repo if not present
+      become: false
+      git:
+        repo: "{{ adapter_repo_url }}"
+        dest: "{{ adapter_path }}"
+        version: master
+        depth: 1
+        update: yes
+
+    - name: Build the deal.II adapter
+      become: false
+      shell: |
+        cmake .
+        make -j $(nproc)
+      args:
+        chdir: "{{ adapter_path }}"
+        executable: /bin/bash
+
+    - name: Add deal.II adapter path to PATH in .bashrc
+      become: false
+      lineinfile:
+        path: "{{ ansible_env.HOME }}/.bashrc"
+        line: 'export PATH="${HOME}/dealii-adapter:${PATH}"'
+        insertafter: EOF

@@ -1,0 +1,50 @@
+---
+- name: Install FEniCS and the FEniCS-preCICE adapter
+  hosts: all
+  become: true
+  vars:
+    fenics_venv_path: "{{ ansible_env.HOME }}/python-venvs/fenicsprecice"
+
+  tasks:
+    - name: Install software-properties-common for add-apt-repository
+      apt:
+        name: software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Add FEniCS APT repository
+      apt_repository:
+        repo: ppa:fenics-packages/fenics
+        state: present
+
+    - name: Update APT cache after adding FEniCS repo
+      apt:
+        update_cache: yes
+
+    - name: Install FEniCS without recommended packages
+      apt:
+        name: fenics
+        state: present
+        install_recommends: no
+
+    - name: Install Python venv module and pip
+      apt:
+        name:
+          - python3-venv
+          - python3-pip
+        state: present
+
+    - name: Create virtual environment for FEniCS-preCICE
+      become: false
+      command: python3 -m venv {{ fenics_venv_path }}
+      args:
+        creates: "{{ fenics_venv_path }}/bin/activate"
+
+    - name: Install fenicsprecice in virtual environment
+      become: false
+      shell: |
+        source {{ fenics_venv_path }}/bin/activate
+        pip install --upgrade pip
+        pip install fenicsprecice
+      args:
+        executable: /bin/bash

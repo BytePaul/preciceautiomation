@@ -1,0 +1,37 @@
+---
+- name: Install Julia and PreCICE Julia bindings
+  hosts: all
+  become: true
+  vars:
+    julia_venv_path: "{{ ansible_env.HOME }}/python-venvs/julia"
+
+  tasks:
+    - name: Install python3-venv and pip
+      apt:
+        name:
+          - python3-venv
+          - python3-pip
+        state: present
+        update_cache: yes
+
+    - name: Create virtual environment for Julia
+      become: false
+      command: python3 -m venv {{ julia_venv_path }}
+      args:
+        creates: "{{ julia_venv_path }}/bin/activate"
+
+    - name: Install jill and Julia via jill
+      become: false
+      shell: |
+        source {{ julia_venv_path }}/bin/activate
+        pip install --upgrade pip
+        pip install jill
+        jill install --confirm
+      args:
+        executable: /bin/bash
+
+    - name: Install PreCICE Julia bindings
+      become: false
+      shell: julia -e 'using Pkg; Pkg.add("PreCICE")'
+      args:
+        executable: /bin/bash

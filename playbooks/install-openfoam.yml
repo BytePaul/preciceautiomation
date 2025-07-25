@@ -1,0 +1,49 @@
+---
+- name: Install OpenFOAM and OpenFOAM-preCICE adapter
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Add OpenFOAM signing key and repository
+      shell: wget -q -O - https://dl.openfoam.com/add-debian-repo.sh | sudo bash
+      args:
+        executable: /bin/bash
+
+    - name: Install OpenFOAM v2312
+      apt:
+        name: openfoam2312-dev
+        state: present
+
+    - name: Enable OpenFOAM by default in .bashrc
+      lineinfile:
+        path: ~/.bashrc
+        line: ". /usr/lib/openfoam/openfoam2312/etc/bashrc"
+        create: yes
+
+    - name: Clone OpenFOAM-preCICE adapter repository
+      git:
+        repo: https://github.com/precice/openfoam-adapter.git
+        dest: ~/openfoam-adapter
+        depth: 1
+        version: master
+
+    - name: Build OpenFOAM-preCICE adapter
+      shell: |
+        source /usr/lib/openfoam/openfoam2312/etc/bashrc
+        ./Allclean
+        ./Allwmake
+      args:
+        chdir: ~/openfoam-adapter
+        executable: /bin/bash
+      environment:
+        FOAM_INST_DIR: /usr/lib/openfoam
+
+    - name: Build OpenFOAM solver in tutorial
+      shell: |
+        source /usr/lib/openfoam/openfoam2312/etc/bashrc
+        wmake
+      args:
+        chdir: ~/tutorials/partitioned-heat-conduction/solver-openfoam
+        executable: /bin/bash
+      environment:
+        FOAM_INST_DIR: /usr/lib/openfoam
