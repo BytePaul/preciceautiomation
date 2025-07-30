@@ -3,11 +3,12 @@
   hosts: all
   become: true
   vars:
+    user_home: "{{ lookup('env', 'HOME') }}"
     calculix_url: "http://www.dhondt.de/ccx_2.20.src.tar.bz2"
     calculix_tarball: "ccx_2.20.src.tar.bz2"
     calculix_dir: "ccx_2.20"
     adapter_repo_url: "https://github.com/precice/calculix-adapter.git"
-    adapter_path: "{{ ansible_env.HOME }}/calculix-adapter"
+    adapter_path: "{{ user_home }}/calculix-adapter"
 
   tasks:
     - name: Install dependencies for CalculiX
@@ -23,20 +24,20 @@
       become: false
       get_url:
         url: "{{ calculix_url }}"
-        dest: "{{ ansible_env.HOME }}/{{ calculix_tarball }}"
+        dest: "{{ user_home }}/{{ calculix_tarball }}"
         mode: '0644'
 
     - name: Extract CalculiX source
       become: false
       unarchive:
-        src: "{{ ansible_env.HOME }}/{{ calculix_tarball }}"
-        dest: "{{ ansible_env.HOME }}"
+        src: "{{ user_home }}/{{ calculix_tarball }}"
+        dest: "{{ user_home }}"
         remote_src: true
 
     - name: Remove CalculiX tarball
       become: false
       file:
-        path: "{{ ansible_env.HOME }}/{{ calculix_tarball }}"
+        path: "{{ user_home }}/{{ calculix_tarball }}"
         state: absent
 
     - name: Clone CalculiX adapter repository
@@ -59,6 +60,6 @@
     - name: Add CalculiX adapter to PATH in .bashrc
       become: false
       lineinfile:
-        path: "{{ ansible_env.HOME }}/.bashrc"
-        line: 'export PATH="${HOME}/calculix-adapter/bin:${PATH}"'
+        path: "{{ user_home }}/.bashrc"
+        line: 'export PATH="{{ user_home }}/calculix-adapter/bin:$PATH"'
         insertafter: EOF

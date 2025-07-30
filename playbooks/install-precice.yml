@@ -3,12 +3,13 @@
   hosts: all
   become: true
   vars:
+    user_home: "/home/vagrant"
     precice_repo: "https://github.com/precice/precice.git"
     tutorials_repo: "https://github.com/precice/tutorials.git"
     fortran_module_repo: "https://github.com/precice/fortran-module.git"
     python_bindings_repo: "https://github.com/precice/python-bindings.git"
-    precice_path: "{{ ansible_env.HOME }}/precice"
-    venv_path: "{{ ansible_env.HOME }}/python-venvs/pyprecice"
+    precice_path: "{{ user_home }}/precice"
+    venv_path: "{{ user_home }}/python-venvs/pyprecice"
 
   tasks:
     - name: Install preCICE build dependencies
@@ -53,8 +54,8 @@
         remote_src: true
         src: /usr/share/precice/examples/
         dest: "{{ precice_path }}-examples"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        owner: vagrant
+        group: vagrant
         mode: preserve
 
     - name: Build solverdummies (C, C++, Fortran)
@@ -88,15 +89,28 @@
     - name: Clone tutorials if not present
       git:
         repo: "{{ tutorials_repo }}"
-        dest: "{{ ansible_env.HOME }}/tutorials"
+        dest: "{{ user_home }}/tutorials"
         depth: 1
         update: yes
       become: false
 
+    - name: Ensure Desktop directory exists
+      file:
+        path: "{{ user_home }}/Desktop"
+        state: directory
+        mode: '0755'
+      become: false
+
+    - name: Remove existing Desktop/tutorials if any
+      file:
+        path: "{{ user_home }}/Desktop/tutorials"
+        state: absent
+      become: false
+
     - name: Link tutorials to Desktop
       file:
-        src: "{{ ansible_env.HOME }}/tutorials"
-        dest: "{{ ansible_env.HOME }}/Desktop/tutorials"
+        src: "{{ user_home }}/tutorials"
+        dest: "{{ user_home }}/Desktop/tutorials"
         state: link
       become: false
 
@@ -104,7 +118,7 @@
       shell: |
         cmake . && make
       args:
-        chdir: "{{ ansible_env.HOME }}/tutorials/quickstart/solid-cpp"
+        chdir: "{{ user_home }}/tutorials/quickstart/solid-cpp"
         executable: /bin/bash
       become: false
 
@@ -115,14 +129,14 @@
         chdir: "{{ item }}"
         executable: /bin/bash
       loop:
-        - "{{ ansible_env.HOME }}/tutorials/elastic-tube-1d/solid-rust"
-        - "{{ ansible_env.HOME }}/tutorials/elastic-tube-1d/fluid-rust"
+        - "{{ user_home }}/tutorials/elastic-tube-1d/solid-rust"
+        - "{{ user_home }}/tutorials/elastic-tube-1d/fluid-rust"
       become: false
 
     - name: Run mesh download script for heat exchanger
       shell: ./download-meshes.sh
       args:
-        chdir: "{{ ansible_env.HOME }}/tutorials/heat-exchanger"
+        chdir: "{{ user_home }}/tutorials/heat-exchanger"
         executable: /bin/bash
       become: false
 
@@ -156,22 +170,22 @@
     - name: Clone Python bindings repo and copy solverdummy
       git:
         repo: "{{ python_bindings_repo }}"
-        dest: "{{ ansible_env.HOME }}/python-bindings"
+        dest: "{{ user_home }}/python-bindings"
         depth: 1
         update: yes
       become: false
 
     - name: Copy python solverdummy example
       copy:
-        src: "{{ ansible_env.HOME }}/python-bindings/examples/solverdummy"
+        src: "{{ user_home }}/python-bindings/examples/solverdummy"
         dest: "{{ precice_path }}-examples/solverdummies/python"
         remote_src: yes
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        owner: vagrant
+        group: vagrant
       become: false
 
     - name: Remove python-bindings folder
       file:
-        path: "{{ ansible_env.HOME }}/python-bindings"
+        path: "{{ user_home }}/python-bindings"
         state: absent
       become: false

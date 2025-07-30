@@ -2,9 +2,9 @@
 - name: Install deal.II and the preCICE deal.II adapter
   hosts: all
   become: true
+
   vars:
     adapter_repo_url: "https://github.com/precice/dealii-adapter.git"
-    adapter_path: "{{ ansible_env.HOME }}/dealii-adapter"
 
   tasks:
     - name: Update apt cache
@@ -15,6 +15,16 @@
       apt:
         name: libdeal.ii-dev
         state: present
+
+    - name: Set adapter path using actual user directory
+      set_fact:
+        adapter_path: "{{ lookup('env', 'HOME') }}/dealii-adapter"
+      become: false
+
+    - name: Debug adapter path
+      become: false
+      debug:
+        msg: "Adapter will be cloned to: {{ adapter_path }}"
 
     - name: Clone deal.II adapter repo if not present
       become: false
@@ -37,6 +47,6 @@
     - name: Add deal.II adapter path to PATH in .bashrc
       become: false
       lineinfile:
-        path: "{{ ansible_env.HOME }}/.bashrc"
-        line: 'export PATH="${HOME}/dealii-adapter:${PATH}"'
+        path: "{{ lookup('env', 'HOME') }}/.bashrc"
+        line: 'export PATH="{{ adapter_path }}:${PATH}"'
         insertafter: EOF

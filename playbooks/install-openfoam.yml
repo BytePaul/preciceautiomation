@@ -1,11 +1,11 @@
 ---
-- name: Install OpenFOAM and OpenFOAM-preCICE adapter
+- name: Install OpenFOAM system-wide
   hosts: all
   become: true
 
   tasks:
     - name: Add OpenFOAM signing key and repository
-      shell: wget -q -O - https://dl.openfoam.com/add-debian-repo.sh | sudo bash
+      shell: wget -q -O - https://dl.openfoam.com/add-debian-repo.sh | bash
       args:
         executable: /bin/bash
 
@@ -14,36 +14,48 @@
         name: openfoam2312-dev
         state: present
 
+- name: Setup OpenFOAM-preCICE for local user
+  hosts: all
+  become: false
+  vars:
+    openfoam_version: openfoam2312
+
+  tasks:
+    - name: Set actual user home
+      ansible.builtin.set_fact:
+        actual_home: "{{ ansible_env.HOME }}"
+
     - name: Enable OpenFOAM by default in .bashrc
       lineinfile:
-        path: ~/.bashrc
-        line: ". /usr/lib/openfoam/openfoam2312/etc/bashrc"
+        path: "{{ actual_home }}/.bashrc"
+        line: ". /usr/lib/openfoam/{{ openfoam_version }}/etc/bashrc"
         create: yes
 
     - name: Clone OpenFOAM-preCICE adapter repository
       git:
         repo: https://github.com/precice/openfoam-adapter.git
-        dest: ~/openfoam-adapter
-        depth: 1
+        dest: "{{ actual_home }}/openfoam-adapter"
         version: master
+        depth: 1
+        update: yes
 
     - name: Build OpenFOAM-preCICE adapter
       shell: |
-        source /usr/lib/openfoam/openfoam2312/etc/bashrc
+        source /usr/lib/openfoam/{{ openfoam_version }}/etc/bashrc
         ./Allclean
         ./Allwmake
       args:
-        chdir: ~/openfoam-adapter
+        chdir: "{{ actual_home }}/openfoam-adapter"
         executable: /bin/bash
       environment:
         FOAM_INST_DIR: /usr/lib/openfoam
 
     - name: Build OpenFOAM solver in tutorial
       shell: |
-        source /usr/lib/openfoam/openfoam2312/etc/bashrc
+        source /usr/lib/openfoam/{{ openfoam_version }}/etc/bashrc
         wmake
       args:
-        chdir: ~/tutorials/partitioned-heat-conduction/solver-openfoam
+        chdir: "{{ actual_home }}/tutorials/partitioned-heat-conduction/solver-openfoam"
         executable: /bin/bash
       environment:
         FOAM_INST_DIR: /usr/lib/openfoam

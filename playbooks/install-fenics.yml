@@ -2,10 +2,20 @@
 - name: Install FEniCS and the FEniCS-preCICE adapter
   hosts: all
   become: true
+
   vars:
-    fenics_venv_path: "{{ ansible_env.HOME }}/python-venvs/fenicsprecice"
+    distro_user: "{{ ansible_user_id }}"
 
   tasks:
+    - name: Get actual user home directory (not root)
+      become: false
+      set_fact:
+        distro_user_home: "{{ lookup('env', 'HOME') }}"
+
+    - name: Set fenics venv path
+      set_fact:
+        fenics_venv_path: "{{ distro_user_home }}/python-venvs/fenicsprecice"
+
     - name: Install software-properties-common for add-apt-repository
       apt:
         name: software-properties-common
@@ -33,6 +43,13 @@
           - python3-venv
           - python3-pip
         state: present
+
+    - name: Ensure directory for virtual environments exists
+      become: false
+      file:
+        path: "{{ distro_user_home }}/python-venvs"
+        state: directory
+        mode: '0755'
 
     - name: Create virtual environment for FEniCS-preCICE
       become: false

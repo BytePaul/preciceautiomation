@@ -1,9 +1,10 @@
 ---
 - name: Install DUNE, DuMux, and preCICE adapters
   hosts: all
-  become: true
+  gather_facts: yes
   vars:
-    dune_dir: "{{ ansible_env.HOME }}/dune-dumux"
+    home_dir: "{{ ansible_env.HOME }}"
+    dune_dir: "{{ home_dir }}/dune-dumux"
     dune_modules:
       - { name: dune-common, url: https://gitlab.dune-project.org/core/dune-common.git, branch: v2.9.1 }
       - { name: dune-istl, url: https://gitlab.dune-project.org/core/dune-istl.git, branch: v2.9.1 }
@@ -20,14 +21,19 @@
     dumux_adapter_repo: "https://github.com/precice/dumux-adapter.git"
 
   tasks:
+    - name: Install git if not present
+      become: true
+      apt:
+        name: git
+        state: present
+        update_cache: yes
+
     - name: Ensure dune-dumux directory exists
-      become: false
       file:
         path: "{{ dune_dir }}"
         state: directory
 
     - name: Clone core DUNE modules
-      become: false
       git:
         repo: "{{ item.url }}"
         dest: "{{ dune_dir }}/{{ item.name }}"
@@ -37,7 +43,6 @@
       loop: "{{ dune_modules }}"
 
     - name: Clone dune-elastodynamics
-      become: false
       git:
         repo: "{{ elastodynamics_repo }}"
         dest: "{{ dune_dir }}/dune-elastodynamics"
@@ -46,13 +51,11 @@
         update: yes
 
     - name: Pull latest dune-elastodynamics
-      become: false
       shell: git pull
       args:
         chdir: "{{ dune_dir }}/dune-elastodynamics"
 
     - name: Clone dune-adapter
-      become: false
       git:
         repo: "{{ dune_adapter_repo }}"
         dest: "{{ dune_dir }}/dune-adapter"
@@ -61,19 +64,16 @@
         update: yes
 
     - name: Pull latest dune-adapter
-      become: false
       shell: git pull
       args:
         chdir: "{{ dune_dir }}/dune-adapter/dune-precice"
 
     - name: Build all DUNE modules with dunecontrol
-      become: false
       shell: ./dune-common/bin/dunecontrol all
       args:
         chdir: "{{ dune_dir }}"
 
     - name: Clone DuMux repository
-      become: false
       git:
         repo: "{{ dumux_repo }}"
         dest: "{{ dune_dir }}/dumux"
@@ -82,7 +82,6 @@
         update: yes
 
     - name: Build DuMux with dunecontrol
-      become: false
       shell: |
         CMAKE_FLAGS="$CMAKE_FLAGS -DCMAKE_DISABLE_FIND_PACKAGE_Kokkos=TRUE" ./dune-common/bin/dunecontrol --only=dumux all
       args:
@@ -90,7 +89,6 @@
         executable: /bin/bash
 
     - name: Clone DuMux adapter
-      become: false
       git:
         repo: "{{ dumux_adapter_repo }}"
         dest: "{{ dune_dir }}/dumux-adapter"
@@ -99,7 +97,6 @@
         update: yes
 
     - name: Build DuMux adapter with dunecontrol
-      become: false
       shell: |
         CMAKE_FLAGS="$CMAKE_FLAGS -DCMAKE_DISABLE_FIND_PACKAGE_Kokkos=TRUE" ./dune-common/bin/dunecontrol --only=dumux-precice all
       args:
@@ -107,17 +104,14 @@
         executable: /bin/bash
 
     - name: Add DUNE_CONTROL_PATH to .bashrc
-      become: false
       lineinfile:
-        path: "{{ ansible_env.HOME }}/.bashrc"
-        line: 'export DUNE_CONTROL_PATH="${HOME}/dune-dumux"'
+        path: "{{ home_dir }}/.bashrc"
+        line: 'export DUNE_CONTROL_PATH="{{ dune_dir }}"'
         insertafter: EOF
 
     - name: Copy DUNE example to tutorials
-      become: false
       copy:
         src: "{{ dune_dir }}/dune-adapter/dune-precice-howto/build-cmake/examples/dune-perpendicular-flap"
-        dest: "{{ ansible_env.HOME }}/tutorials/perpendicular-flap/solid-dune"
+        dest: "{{ home_dir }}/tutorials/perpendicular-flap/solid-dune"
         remote_src: yes
         mode: '0755'
-
