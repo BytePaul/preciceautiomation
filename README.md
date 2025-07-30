@@ -1,7 +1,7 @@
 Ansible Playbooks for preCICE Development Environment Setup
 This repository contains a set of Ansible playbooks that automate the provisioning of the preCICE development environment. These playbooks are converted from original `.sh` shell scripts, making the setup process modular, idempotent, and more maintainable.
 ## 📁 Directory Structure
-
+```
 ansible/
 ├── inventory.ini          # Target hosts configuration
 ├── playbooks/             # Individual provisioning playbooks
@@ -23,6 +23,7 @@ ansible/
 │   ├── install-su2.yml
 │   └── install-vscode.yml
 └── README.md              # This file
+```
 
 ## ✅ Purpose
 These playbooks set up all necessary software components and development tools for contributing to or working with preCICE, a coupling library for partitioned multi-physics simulations.
